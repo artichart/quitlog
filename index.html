@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QuitLog">
+<meta name="theme-color" content="#0e1424">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>QuitLog</title>
+<style>
+:root{
+  --bg:#0e1424; --card:#18203a; --card2:#202a4a; --line:#2c3760;
+  --text:#eef1fa; --mute:#8b94b3; --accent:#ffb547; --ok:#3fd0a0; --bad:#ff6b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Noto Sans Thai",sans-serif;
+  -webkit-user-select:none;user-select:none}
+body{padding:env(safe-area-inset-top) 0 calc(72px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+header h1{font-size:20px;margin:0;letter-spacing:.5px}
+header h1 b{color:var(--ok)}
+.iconbtn{width:40px;height:40px;border-radius:50%;border:0;background:var(--card);color:var(--text);font-size:18px}
+main{padding:0 16px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:10px;align-items:center}
+.between{justify-content:space-between}
+.mute{color:var(--mute);font-size:13px}
+button.primary{width:100%;padding:16px;border:0;border-radius:16px;background:var(--accent);color:#1b1300;font-size:18px;font-weight:700}
+button.okbtn{width:100%;padding:14px;border:0;border-radius:16px;background:var(--ok);color:#06281d;font-size:16px;font-weight:700}
+button.ghost{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);font-size:14px}
+.phase{background:var(--card2);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.phase b{color:var(--accent)}
+.ringwrap{position:relative;width:min(70vw,270px);aspect-ratio:1;margin:4px auto 14px}
+.ringwrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ringtxt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ringtxt .t{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:6px}
+.stats3 .v{font-size:20px;font-weight:700}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);
+  background:#121a30;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{background:none;border:0;color:var(--mute);padding:10px 0 8px;font-size:11px}
+.tabs button span{display:block;font-size:20px;margin-bottom:2px}
+.tabs button.on{color:var(--ok)}
+.list .item{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.list .item:last-child{border-bottom:0}
+.badge{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--ok);color:#06281d;font-weight:700}
+.badge.no{background:var(--bad);color:#fff}
+.badge.cur{background:var(--accent);color:#1b1300}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px;-webkit-user-select:text;user-select:text}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 6px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:10}
+.sheet.on{display:flex}
+.sheet .box{width:100%;background:var(--card);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.sheet h3{margin:0 0 6px}
+.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.chips button{padding:14px 8px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{padding:10px 0;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+.seg button.on{background:var(--ok);color:#06281d;border-color:var(--ok);font-weight:700}
+.hbar{display:grid;grid-template-columns:120px 1fr 28px;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+.hbar i{display:block;height:10px;border-radius:5px;background:var(--accent)}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));background:var(--card2);border:1px solid var(--line);
+  border-radius:14px;padding:14px;font-size:15px;z-index:20;display:none}
+.toast.on{display:block}
+svg text{font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <button class="iconbtn" onclick="openSettings()" aria-label="ตั้งค่า">⚙︎</button>
+  <h1>Quit<b>Log</b></h1>
+  <button class="iconbtn" onclick="openAdd()" aria-label="เพิ่มย้อนหลัง">＋</button>
+</header>
+
+<main>
+  <!-- today -->
+  <section class="view on" id="v-today">
+    <div class="phase" id="phase"></div>
+    <div class="card">
+      <div class="ringwrap">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#1e2747" stroke-width="10"/>
+          <circle id="ring" cx="60" cy="60" r="52" fill="none" stroke="var(--ok)" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+        </svg>
+        <div class="ringtxt">
+          <div class="mute" id="ringLabel"></div>
+          <div class="t" id="ringBig"></div>
+          <div class="mute" id="ringSub"></div>
+        </div>
+      </div>
+      <div class="row between" style="margin-bottom:6px"><span class="mute">มวนแรกของวัน</span><span id="firstLine"></span></div>
+      <div class="row between" style="margin-bottom:14px"><span class="mute">มวนล่าสุด</span><span id="lastLine"></span></div>
+      <button class="primary" onclick="openSmoke()">🚬 สูบ 1 มวน</button>
+      <button class="okbtn" style="margin-top:10px" onclick="resist()">💪 อยาก แต่ไม่สูบ <span id="urgeN"></span></button>
+    </div>
+    <div class="card">
+      <div class="row between"><b>วันนี้</b><span class="mute">กดเพื่อลบ ถ้ากดผิด</span></div>
+      <div class="list" id="todayList"></div>
+    </div>
+    <div class="card">
+      <b>เทคนิคคุมเกม</b>
+      <div class="mute" style="font-size:14px;line-height:1.6;margin-top:6px">
+        🚫 ไม่พกซองติดตัว ต้องลุกไปหยิบทุกครั้ง<br>
+        🕐 สูบตามเวลาที่ตั้ง ไม่ใช่ตามอารมณ์<br>
+        🧊 อยากนอกเวลา → น้ำเย็นจัด / หมากฝรั่ง / เดิน 5 นาที<br>
+        ⏳ ความอยากจะลดลงเองใน 3–5 นาที
+      </div>
+    </div>
+  </section>
+
+  <!-- stats -->
+  <section class="view" id="v-stats">
+    <div class="card">
+      <div class="row between"><b>14 วันล่าสุด</b><span class="mute">ขีด = โควตา</span></div>
+      <div id="chart14" style="margin-top:10px"></div>
+      <div class="stats3" style="margin-top:10px">
+        <div><div class="v" id="s1"></div><div class="mute">วันติดในโควตา</div></div>
+        <div><div class="v" id="s2"></div><div class="mute">มวนที่ลดได้</div></div>
+        <div><div class="v" id="s3"></div><div class="mute">ประหยัด (บาท)</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="stats3">
+        <div><div class="v" id="s4"></div><div class="mute">เฉลี่ย 7 วัน</div></div>
+        <div><div class="v" id="s5"></div><div class="mute">อยากแต่ชนะ</div></div>
+        <div><div class="v" id="s6"></div><div class="mute">วันไม่สูบเลย</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <b>ช่วงที่สูบบ่อย (14 วัน)</b>
+      <div id="hourChart" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <b>สูบเพราะอะไร (14 วัน)</b>
+      <div id="trigList" style="margin-top:6px"></div>
+    </div>
+  </section>
+
+  <!-- plan -->
+  <section class="view" id="v-plan">
+    <div class="card" id="planCard"></div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button class="on" data-v="today"><span>🚬</span>วันนี้</button>
+  <button data-v="stats"><span>📊</span>สถิติ</button>
+  <button data-v="plan"><span>🪜</span>แผน</button>
+</nav>
+
+<div class="toast" id="toast" onclick="this.classList.remove('on')"></div>
+
+<!-- smoke sheet -->
+<div class="sheet" id="shSmoke" onclick="if(event.target===this)closeSheet(this)">
+  <div class="box">
+    <h3>สูบเพราะอะไร?</h3>
+    <div class="mute" id="smokeWarn"></div>
+    <div class="chips" id="trigChips"></div>
+  </div>
+</div>
+
+<!-- add past sheet -->
+<div class="sheet" id="shAdd" onclick="if(event.target===this)closeSheet(this)">
+  <div class="box">
+    <h3>เพิ่มมวนย้อนหลัง</h3>
+    <label>เวลา</label><input type="datetime-local" id="aTime">
+    <label>สาเหตุ</label><select id="aTrig"></select>
+    <button class="primary" style="margin-top:14px" onclick="saveAdd()">บันทึก</button>
+  </div>
+</div>
+
+<!-- skip-baseline sheet -->
+<div class="sheet" id="shBase" onclick="if(event.target===this)closeSheet(this)">
+  <div class="box">
+    <h3>เริ่มลดเลย</h3>
+    <div class="mute">ถ้ารู้ตัวเลขตัวเองอยู่แล้ว ไม่ต้องรอสำรวจ 2 วัน</div>
+    <label>ปกติสูบวันละกี่มวน</label><input type="number" id="bN" inputmode="numeric" min="1" max="80">
+    <label>ปกติมวนแรกของวันกี่โมง</label><input type="time" id="bFirst" value="08:00">
+    <button class="primary" style="margin-top:14px" onclick="saveBase()">เริ่มแผนวันนี้</button>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="sheet" id="shSet" onclick="if(event.target===this)closeSheet(this)">
+  <div class="box">
+    <h3>ตั้งค่าแผน</h3>
+    <label>ลดครั้งละ (% ของตอนเริ่ม)</label><div class="seg" id="segPct"></div>
+    <label>ลดทุก (วัน)</label><div class="seg" id="segDays"></div>
+    <label>เลื่อนมวนแรกออกไปขั้นละ (นาที)</label><div class="seg" id="segDelay"></div>
+    <div class="row" style="margin-top:4px">
+      <div style="flex:1"><label>ราคาซอง (บาท)</label><input type="number" id="pPack" inputmode="decimal"></div>
+      <div style="flex:1"><label>มวน/ซอง</label><input type="number" id="pPer" inputmode="numeric"></div>
+    </div>
+    <button class="primary" style="margin-top:14px" onclick="saveSettings()">บันทึก</button>
+    <label style="margin-top:18px">ข้อมูลอยู่ในเครื่องนี้เท่านั้น ควรสำรองไว้เป็นระยะ</label>
+    <div class="row">
+      <button class="ghost" style="flex:1" onclick="exportData()">สำรองข้อมูล</button>
+      <button class="ghost" style="flex:1" onclick="document.getElementById('imp').click()">กู้คืน</button>
+    </div>
+    <input type="file" id="imp" accept="application/json,.json" style="display:none" onchange="importData(this.files[0])">
+    <div class="mute" id="lastBackup" style="margin-top:8px"></div>
+    <button class="ghost" style="width:100%;margin-top:14px;color:var(--bad)" onclick="resetPlan()">เริ่มแผนใหม่ (สำรวจใหม่ · ประวัติมวนยังอยู่)</button>
+  </div>
+</div>
+
+<script>
+// ---------- constants (ต้องอยู่ก่อน load()) ----------
+const KEY = 'quitlog.v1';
+const H = 3600e3, MIN = 60e3, DAY_CUT = 4 * H;   // วันสูบเริ่มตี 4 · มวนตี 2 = ของเมื่อวาน
+const TH_DAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TRIGS = [['wake','☀️ ตื่นนอน'],['meal','🍽️ หลังอาหาร'],['work','💻 ทำงาน/หน้าคอม'],['stress','😤 เครียด'],
+  ['bored','😑 เบื่อ/แก้เซ็ง'],['coffee','☕ กาแฟ'],['drink','🍺 ดื่ม'],['social','👥 เพื่อนสูบ'],['travel','🚶 ระหว่างทาง'],['other','• อื่นๆ']];
+const TIPS = ['🧊 ดื่มน้ำเย็นจัดสักแก้ว', '🍬 เคี้ยวหมากฝรั่ง', '🚶 ลุกเดิน 5 นาที', '🌬️ หายใจเข้าลึก 4 วิ ค้าง 4 ออก 4 × 5 รอบ',
+  '⏳ รอ 5 นาที ความอยากจะลดลงเอง', '🪥 แปรงฟัน', '📵 ย้ายไปที่ที่สูบไม่ได้'];
+const DEF_PLAN = { baseDays: 2, orig: null, origStart: null, baseline: null, baseFirst: null, planStart: null, stepPct: 25, stepDays: 3, delayMin: 30 };
+
+let db = load();
+function load() {
+  let d;
+  try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (d && Array.isArray(d.logs)) {
+    d.urges = d.urges || []; d.plan = Object.assign({}, DEF_PLAN, d.plan); d.price = Object.assign({ pack: 0, per: 20 }, d.price);
+    return d;
+  }
+  return { start: sdayKey(Date.now()), logs: [], urges: [], plan: Object.assign({}, DEF_PLAN), price: { pack: 0, per: 20 }, lastBackup: null };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { alert('บันทึกไม่ได้: ' + e.message); } }
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+// ---------- helpers ----------
+function pad(n) { return String(n).padStart(2, '0'); }
+function dayKey(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function sdayKey(ms) { return dayKey(ms - DAY_CUT); }                        // วันสูบของเวลา ms
+function keyMs(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).getTime(); }
+function addK(k, n) { const t = new Date(keyMs(k)); t.setDate(t.getDate() + n); return dayKey(t.getTime()); }
+function diffK(a, b) { return Math.round((keyMs(b) - keyMs(a)) / 864e5); }   // b − a (วัน)
+const $ = id => document.getElementById(id);
+const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const minHM = m => pad(Math.floor(m / 60) % 24) + ':' + pad(Math.round(m % 60));
+const kShort = k => { const t = new Date(keyMs(k)); return TH_DAY[t.getDay()] + ' ' + t.getDate() + ' ' + TH_MON[t.getMonth()]; };
+const dur = ms => { const m = Math.floor(ms / MIN); return m < 60 ? m + ' นาที' : Math.floor(m / 60) + ' ชม. ' + (m % 60) + ' นาที'; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const trigName = id => (TRIGS.find(t => t[0] === id) || TRIGS[TRIGS.length - 1])[1];
+// นาทีนับจากเที่ยงคืนของวันสูบ (มวนตี 2 = 26:00 → ยังเรียงหลังมวนเย็นถูก)
+const minOfSday = ms => (ms - keyMs(sdayKey(ms))) / MIN;
+function byDay() { const m = {}; for (const l of db.logs) (m[sdayKey(l.t)] = m[sdayKey(l.t)] || []).push(l); for (const k in m) m[k].sort((a, b) => a.t - b.t); return m; }
+
+// ---------- plan ----------
+// สำรวจครบ baseDays วันแล้ว → คิด baseline อัตโนมัติจากตัวเลขจริง
+function settleBaseline() {
+  const p = db.plan; if (p.baseline != null) return;
+  const today = sdayKey(Date.now()), end = addK(db.start, p.baseDays);
+  if (diffK(today, end) > 0) return;                                        // ยังอยู่ในช่วงสำรวจ
+  const m = byDay(), days = [];
+  for (let i = 0; i < p.baseDays; i++) days.push(m[addK(db.start, i)] || []);
+  const withLogs = days.filter(l => l.length);
+  if (!withLogs.length) { db.start = today; save(); return; }               // ไม่ได้บันทึกเลย → เริ่มสำรวจใหม่วันนี้
+  p.baseline = Math.round(withLogs.reduce((a, l) => a + l.length, 0) / withLogs.length);
+  p.baseFirst = Math.round(withLogs.reduce((a, l) => a + minOfSday(l[0].t), 0) / withLogs.length);
+  p.planStart = end; p.orig = p.baseline; p.origStart = end; save();
+}
+// สถานะแผนของวัน k: null = ช่วงสำรวจ
+function planOf(k) {
+  const p = db.plan;
+  if (p.baseline == null || diffK(p.planStart, k) < 0) return null;
+  const step = Math.floor(diffK(p.planStart, k) / p.stepDays) + 1;
+  const quota = Math.max(0, Math.round(p.baseline * (1 - p.stepPct / 100 * step)));
+  const first = Math.min(p.baseFirst + p.delayMin * step, 23 * 60);
+  const stepEnd = addK(p.planStart, step * p.stepDays);                    // วันแรกของขั้นถัดไป
+  return { step, quota, first, stepEnd, nextQuota: Math.max(0, Math.round(p.baseline * (1 - p.stepPct / 100 * (step + 1)))) };
+}
+function steps() {
+  const p = db.plan, out = [];
+  for (let s = 1; s < 100; s++) {
+    const q = Math.max(0, Math.round(p.baseline * (1 - p.stepPct / 100 * s)));
+    out.push({ s, from: addK(p.planStart, (s - 1) * p.stepDays), to: addK(p.planStart, s * p.stepDays - 1), q, first: Math.min(p.baseFirst + p.delayMin * s, 23 * 60) });
+    if (q === 0) break;
+  }
+  return out;
+}
+
+// ---------- tabs ----------
+let curView = 'today';
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  curView = b.dataset.v;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + curView));
+  render();
+});
+function render() {
+  settleBaseline();
+  renderToday();
+  if (curView === 'stats') renderStats();
+  if (curView === 'plan') renderPlan();
+}
+
+// ---------- today ----------
+const CIRC = 2 * Math.PI * 52;
+function renderToday() {
+  const now = Date.now(), k = sdayKey(now), list = byDay()[k] || [], pl = planOf(k), n = list.length;
+  const urges = db.urges.filter(u => sdayKey(u.t) === k).length;
+  $('urgeN').textContent = urges ? '(' + urges + ')' : '';
+  if (!pl) {
+    const d = diffK(db.start, k) + 1;
+    $('phase').innerHTML = `<b>ช่วงสำรวจ วันที่ ${Math.min(d, db.plan.baseDays)}/${db.plan.baseDays}</b><div class="mute" style="margin-top:4px">สูบตามปกติ แต่กดบันทึก <u>ทุกมวน</u> พร้อมสาเหตุ เพื่อรู้ตัวเลขจริงก่อนตั้งเป้า</div>
+      <button class="ghost" style="margin-top:10px" onclick="openBase()">รู้ตัวเลขแล้ว เริ่มลดเลย</button>`;
+    $('ringLabel').textContent = 'สูบไปแล้ววันนี้'; $('ringBig').textContent = n; $('ringSub').textContent = 'มวน';
+    $('ring').style.strokeDashoffset = CIRC; $('ring').style.stroke = 'var(--accent)';
+    $('firstLine').textContent = n ? hm(list[0].t) : '–';
+  } else {
+    const done = pl.quota === 0;
+    $('phase').innerHTML = done
+      ? `<b>🎉 ขั้นสุดท้าย · 0 มวน</b><div class="mute" style="margin-top:4px">ไม่สูบแล้ว ${smokeFreeRun()} วันติด · อยากเมื่อไหร่กด 💪</div>`
+      : `<b>ขั้นที่ ${pl.step} · วันละไม่เกิน ${pl.quota} มวน</b><div class="mute" style="margin-top:4px">ถึง ${kShort(addK(pl.stepEnd, -1))} · จากนั้นลดเหลือ ${pl.nextQuota} มวน (อีก ${diffK(k, pl.stepEnd)} วัน)</div>`;
+    const left = pl.quota - n;
+    $('ringLabel').textContent = left >= 0 ? 'เหลือวันนี้' : 'เกินโควตา';
+    $('ringBig').textContent = Math.abs(left);
+    $('ringSub').textContent = 'สูบแล้ว ' + n + ' / ' + pl.quota + ' มวน';
+    const p = pl.quota ? Math.min(1, n / pl.quota) : (n ? 1 : 0);
+    $('ring').style.strokeDashoffset = CIRC * (1 - p);
+    $('ring').style.stroke = left < 0 ? 'var(--bad)' : left === 0 ? 'var(--accent)' : 'var(--ok)';
+    const firstOk = keyMs(k) + pl.first * MIN;
+    $('firstLine').innerHTML = n ? `${hm(list[0].t)} ${list[0].t >= firstOk ? '<span class="badge">ตามแผน</span>' : '<span class="badge no">ก่อนเวลา</span>'}`
+      : done ? '–' : `ไม่ก่อน <b>${minHM(pl.first)}</b>${now < firstOk ? ' · อีก ' + dur(firstOk - now) : ''}`;
+  }
+  const last = db.logs.reduce((a, l) => l.t > a ? l.t : a, 0);
+  $('lastLine').textContent = last ? hm(last) + ' · ผ่านมา ' + dur(now - last) : '–';
+  $('todayList').innerHTML = list.length ? list.slice().reverse().map(l =>
+    `<div class="item" onclick="delLog('${l.id}')"><span>${hm(l.t)} · ${trigName(l.trig)}</span><span class="mute">✕</span></div>`).join('')
+    : '<div class="mute" style="padding:10px 0">ยังไม่ได้สูบวันนี้ 👍</div>';
+}
+function smokeFreeRun() {
+  const m = byDay(); let k = sdayKey(Date.now()), n = 0;
+  if (m[k]) return 0;
+  k = addK(k, -1);
+  while (!m[k] && planOf(k) && planOf(k).quota === 0) { n++; k = addK(k, -1); }
+  return n;
+}
+function openSmoke() {
+  const now = Date.now(), k = sdayKey(now), pl = planOf(k), n = (byDay()[k] || []).length;
+  let warn = '';
+  if (pl) {
+    if (n >= pl.quota) warn = `⚠️ ครบโควตาวันนี้แล้ว (${pl.quota} มวน)`;
+    else if (!n && now < keyMs(k) + pl.first * MIN) warn = `⚠️ ยังไม่ถึง ${minHM(pl.first)} · ลองยืดอีกนิด`;
+  }
+  $('smokeWarn').innerHTML = warn ? warn + `<br>ลองก่อน: ${TIPS[Math.floor(Math.random() * TIPS.length)]} · ถ้ายังอยากค่อยกด` : '';
+  $('smokeWarn').style.color = warn ? 'var(--accent)' : '';
+  $('trigChips').innerHTML = TRIGS.map(t => `<button onclick="logSmoke('${t[0]}')">${t[1]}</button>`).join('');
+  $('shSmoke').classList.add('on');
+}
+function logSmoke(trig) {
+  db.logs.push({ id: uid(), t: Date.now(), trig }); save();
+  closeSheet($('shSmoke')); render();
+}
+function resist() {
+  db.urges.push({ id: uid(), t: Date.now() }); save(); render();
+  toast('💪 ชนะไป 1 ครั้ง · ' + TIPS[Math.floor(Math.random() * TIPS.length)]);
+}
+function delLog(id) {
+  const l = db.logs.find(x => x.id === id);
+  if (!l || !confirm('ลบมวน ' + hm(l.t) + '?')) return;
+  db.logs = db.logs.filter(x => x.id !== id); save(); render();
+}
+let toastH;
+function toast(msg) { $('toast').textContent = msg; $('toast').classList.add('on'); clearTimeout(toastH); toastH = setTimeout(() => $('toast').classList.remove('on'), 4000); }
+
+// ---------- add past / baseline ----------
+function toInput(ms) { const d = new Date(ms); return dayKey(ms) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function openAdd() {
+  $('aTime').value = toInput(Date.now());
+  $('aTrig').innerHTML = TRIGS.map(t => `<option value="${t[0]}">${t[1]}</option>`).join('');
+  $('shAdd').classList.add('on');
+}
+function saveAdd() {
+  const t = new Date($('aTime').value).getTime();
+  if (!t || t > Date.now()) return alert('ใส่เวลาที่ผ่านมาแล้ว');
+  db.logs.push({ id: uid(), t, trig: $('aTrig').value }); save(); closeSheet($('shAdd')); render();
+}
+function openBase() { $('bN').value = ''; $('shBase').classList.add('on'); }
+function saveBase() {
+  const n = parseInt($('bN').value, 10), f = $('bFirst').value;
+  if (!(n > 0 && n <= 80)) return alert('ใส่จำนวนมวน 1–80');
+  if (!f) return alert('ใส่เวลามวนแรก');
+  const [hh, mm] = f.split(':').map(Number);
+  const k = sdayKey(Date.now());
+  Object.assign(db.plan, { baseline: n, orig: n, origStart: k, baseFirst: (hh < 4 ? hh + 24 : hh) * 60 + mm, planStart: k });
+  save(); closeSheet($('shBase')); render();
+}
+
+// ---------- stats ----------
+function renderStats() {
+  const m = byDay(), today = sdayKey(Date.now()), days = [];
+  for (let i = 13; i >= 0; i--) { const k = addK(today, -i); days.push({ k, n: (m[k] || []).length, pl: planOf(k) }); }
+  const maxN = Math.max(5, db.plan.baseline || 0, ...days.map(d => d.n));
+  const W = 340, Hh = 170, base = 145, top = 16, gap = W / 14, bw = 14;
+  const y = v => base - v / maxN * (base - top);
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" width="100%">`;
+  days.forEach((d, i) => {
+    const cx = gap * i + gap / 2, isToday = d.k === today;
+    const col = !d.pl ? '#56618c' : d.n > d.pl.quota ? 'var(--bad)' : isToday ? 'var(--accent)' : 'var(--ok)';
+    if (d.n) s += `<rect x="${cx - bw / 2}" y="${y(d.n)}" width="${bw}" height="${base - y(d.n)}" rx="4" fill="${col}"/><text x="${cx}" y="${y(d.n) - 4}" fill="${col}" font-size="10" text-anchor="middle">${d.n}</text>`;
+    else if (d.pl) s += `<text x="${cx}" y="${base - 2}" fill="var(--ok)" font-size="11" text-anchor="middle">✓</text>`;
+    if (d.pl) s += `<line x1="${cx - bw / 2 - 3}" x2="${cx + bw / 2 + 3}" y1="${y(d.pl.quota)}" y2="${y(d.pl.quota)}" stroke="#eef1fa" stroke-width="2"/>`;
+    s += `<text x="${cx}" y="${Hh - 6}" fill="#8b94b3" font-size="9" text-anchor="middle">${new Date(keyMs(d.k)).getDate()}</text>`;
+  });
+  $('chart14').innerHTML = s + '</svg>';
+  // วันติดในโควตา (วันนี้ยังไม่จบ: นับถ้ายังไม่เกิน)
+  let streak = 0;
+  for (let k = today; ; k = addK(k, -1)) { const pl = planOf(k); if (!pl || (m[k] || []).length > pl.quota) break; streak++; }
+  let saved = 0, free = 0;
+  if (db.plan.orig != null) for (let k = db.plan.origStart; diffK(k, today) >= 0; k = addK(k, 1)) {
+    const n = (m[k] || []).length; saved += Math.max(0, db.plan.orig - n); if (!n && k !== today) free++;
+  }
+  $('s1').textContent = streak;
+  $('s2').textContent = saved;
+  $('s3').textContent = db.price.pack ? Math.round(saved * db.price.pack / (db.price.per || 20)).toLocaleString() : '–';
+  const last7 = days.slice(6, 13); // 7 วันที่จบแล้ว (ไม่รวมวันนี้)
+  $('s4').textContent = (last7.reduce((a, d) => a + d.n, 0) / last7.length).toFixed(1);
+  $('s5').textContent = db.urges.length;
+  $('s6').textContent = free;
+  // ชั่วโมง
+  const since = keyMs(addK(today, -13)), recent = db.logs.filter(l => l.t >= since), hrs = Array(24).fill(0);
+  recent.forEach(l => hrs[new Date(l.t).getHours()]++);
+  const hm2 = Math.max(1, ...hrs);
+  let hs = `<svg viewBox="0 0 340 90" width="100%">`;
+  hrs.forEach((v, h) => { const x = h * 14 + 4, bh = v / hm2 * 60; hs += `<rect x="${x}" y="${68 - bh}" width="10" height="${bh}" rx="2" fill="var(--accent)" opacity="${v ? 1 : .15}"/>`; if (h % 3 === 0) hs += `<text x="${x + 5}" y="84" fill="#8b94b3" font-size="9" text-anchor="middle">${h}</text>`; });
+  $('hourChart').innerHTML = recent.length ? hs + '</svg>' : '<div class="mute">ยังไม่มีข้อมูล</div>';
+  const tc = {}; recent.forEach(l => tc[l.trig] = (tc[l.trig] || 0) + 1);
+  const tl = Object.entries(tc).sort((a, b) => b[1] - a[1]), tm = tl.length ? tl[0][1] : 1;
+  $('trigList').innerHTML = tl.length ? tl.map(([t, v]) => `<div class="hbar"><span>${trigName(t)}</span><i style="width:${v / tm * 100}%"></i><span class="mute">${v}</span></div>`).join('')
+    : '<div class="mute">ยังไม่มีข้อมูล</div>';
+}
+
+// ---------- plan view ----------
+function renderPlan() {
+  const p = db.plan, today = sdayKey(Date.now());
+  if (p.baseline == null) {
+    $('planCard').innerHTML = `<b>ยังอยู่ในช่วงสำรวจ</b><div class="mute" style="margin-top:6px;line-height:1.6">บันทึกทุกมวน ${p.baseDays} วัน (ถึง ${kShort(addK(db.start, p.baseDays - 1))}) แล้วแอปจะคิดค่าเฉลี่ยต่อวันกับเวลามวนแรก และสร้างบันไดลดให้เอง<br>ลดทีละ ${p.stepPct}% ทุก ${p.stepDays} วัน · เลื่อนมวนแรกขั้นละ ${p.delayMin} นาที (แก้ได้ใน ⚙︎)</div>
+      <button class="ghost" style="margin-top:12px" onclick="openBase()">รู้ตัวเลขแล้ว เริ่มลดเลย</button>`;
+    return;
+  }
+  const cur = planOf(today);
+  $('planCard').innerHTML = `<div class="row between"><b>บันไดลด</b><span class="mute">เริ่มที่ ${p.baseline} มวน · มวนแรก ${minHM(p.baseFirst)}</span></div>
+    <div class="list" style="margin-top:6px">${steps().map(s => {
+      const now = cur && cur.step === s.s, past = diffK(s.to, today) > 0;
+      return `<div class="item" style="${now ? 'color:var(--accent);font-weight:700' : past ? 'opacity:.5' : ''}"><div><div>ขั้น ${s.s} · ${s.q === 0 ? 'เลิกขาด 🎉' : 'วันละ ' + s.q + ' มวน'}</div>
+        <div class="mute">${kShort(s.from)}${s.q === 0 ? ' เป็นต้นไป' : ' – ' + kShort(s.to)}${s.q ? ' · มวนแรกไม่ก่อน ' + minHM(s.first) : ''}</div></div>
+        ${now ? '<span class="badge cur">ตอนนี้</span>' : past ? '<span class="mute">ผ่านแล้ว</span>' : ''}</div>`;
+    }).join('')}</div>
+    <div class="mute" style="margin-top:10px">ลดทีละ ${p.stepPct}% ของตอนเริ่ม ทุก ${p.stepDays} วัน · ถ้าขั้นไหนหนักเกิน แก้ "ลดทุก" ใน ⚙︎ เป็น 4–7 วันได้</div>`;
+}
+
+// ---------- settings / backup ----------
+const SEG = { segPct: ['stepPct', [10, 20, 25, 33]], segDays: ['stepDays', [3, 4, 5, 7]], segDelay: ['delayMin', [0, 15, 30, 60]] };
+let draft = {};
+function drawSeg() {
+  for (const id in SEG) { const [f, vals] = SEG[id]; $(id).innerHTML = vals.map(v => `<button class="${draft[f] === v ? 'on' : ''}" onclick="draft.${f}=${v};drawSeg()">${v}</button>`).join(''); }
+}
+function openSettings() {
+  draft = { stepPct: db.plan.stepPct, stepDays: db.plan.stepDays, delayMin: db.plan.delayMin }; drawSeg();
+  $('pPack').value = db.price.pack || ''; $('pPer').value = db.price.per || 20;
+  $('lastBackup').textContent = db.lastBackup ? 'สำรองล่าสุด ' + kShort(dayKey(db.lastBackup)) + ' ' + hm(db.lastBackup) : 'ยังไม่เคยสำรอง';
+  $('shSet').classList.add('on');
+}
+function saveSettings() {
+  const p = db.plan;
+  // เปลี่ยนจังหวะกลางทาง: เริ่มนับขั้นใหม่จากวันนี้ ที่ระดับเดิม ไม่ให้โควตากระโดด
+  if (p.baseline != null && (draft.stepPct !== p.stepPct || draft.stepDays !== p.stepDays || draft.delayMin !== p.delayMin)) {
+    const cur = planOf(sdayKey(Date.now()));
+    if (cur) {
+      const q0 = cur.quota, f0 = cur.first;
+      Object.assign(p, draft);
+      // ตั้ง baseline/planStart เสมือนใหม่ ให้ขั้น 1 ของจังหวะใหม่ = โควตาปัจจุบัน
+      p.baseline = Math.round(q0 / (1 - p.stepPct / 100)) || q0; p.baseFirst = f0 - p.delayMin; p.planStart = sdayKey(Date.now());
+      if (!confirm('เริ่มนับขั้นใหม่จากวันนี้ ที่วันละ ' + planOf(p.planStart).quota + ' มวน?')) { db = load(); return; }
+    }
+  }
+  Object.assign(p, draft);
+  db.price = { pack: parseFloat($('pPack').value) || 0, per: parseInt($('pPer').value, 10) || 20 };
+  save(); closeSheet($('shSet')); render();
+}
+function resetPlan() {
+  if (!confirm('เริ่มสำรวจใหม่ตั้งแต่วันนี้? (มวนที่บันทึกไว้ยังอยู่)')) return;
+  db.plan = Object.assign({}, DEF_PLAN, { stepPct: db.plan.stepPct, stepDays: db.plan.stepDays, delayMin: db.plan.delayMin });
+  db.start = sdayKey(Date.now()); save(); closeSheet($('shSet')); render();
+}
+function download(name, text, type) {
+  const file = new File([text], name, { type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file] }).catch(() => {});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function exportData() {
+  db.lastBackup = Date.now(); save();
+  download('quitlog-' + dayKey(Date.now()) + '.json', JSON.stringify(db, null, 1), 'application/json');
+  openSettings();
+}
+function importData(file) {
+  if (!file) return;
+  file.text().then(t => {
+    const d = JSON.parse(t);
+    if (!Array.isArray(d.logs)) throw new Error('ไฟล์ไม่ถูกต้อง');
+    if (!confirm('แทนที่ข้อมูลปัจจุบันด้วย ' + d.logs.length + ' มวน?')) return;
+    localStorage.setItem(KEY, JSON.stringify(d)); db = load(); closeSheet($('shSet')); render();
+  }).catch(e => alert('กู้คืนไม่ได้: ' + e.message));
+  $('imp').value = '';
+}
+function closeSheet(el) { el.classList.remove('on'); }
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+render();
+setInterval(renderToday, 30e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+</script>
+</body>
+</html>
